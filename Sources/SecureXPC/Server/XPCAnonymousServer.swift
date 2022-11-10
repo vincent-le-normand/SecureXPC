@@ -46,6 +46,13 @@ internal class XPCAnonymousServer: XPCServer {
         XPCServerEndpoint(connectionDescriptor: .anonymous,
                         endpoint: xpc_endpoint_create(self.anonymousListenerConnection))
     }
+
+	/// Invalidate the connection.
+	/// This is relevant for testing. The server is invalidated so no more connections are possible, simulate a crash of the server
+	func invalidate() {
+		self.started = false
+		xpc_connection_cancel(anonymousListenerConnection)
+	}
 }
 
 extension XPCAnonymousServer: XPCNonBlockingServer {

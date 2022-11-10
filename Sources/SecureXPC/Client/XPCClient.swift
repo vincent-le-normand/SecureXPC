@@ -613,7 +613,7 @@ public class XPCClient {
             // resending a message will *not* work.
             self.connection = nil
         }
-        
+		self.inProgressSequentialReplies.serverConnectionTerminated()
         // XPC_ERROR_TERMINATION_IMMINENT is not applicable to the client side of a connection
     }
     
@@ -899,4 +899,22 @@ fileprivate class InProgressSequentialReplies {
             handler.handleResponse(response)
         }
     }
+
+	/// Called whenever connection has terminated
+	/// This method will call en error on all sequential replies because the server won't be able to reply anymore
+	func serverConnectionTerminated() {
+		serialQueue.asyncAfter(deadline: .now() + 1) {
+			do {
+				var errorDic = xpc_dictionary_create(nil, nil, 0)
+				try Response.encodeRequestID(UUID(), intoReply: &errorDic)
+				try Response.encodePayload(false, intoReply: &errorDic)
+				try Response.encodeError(.connectionInterrupted, intoReply: &errorDic)
+				let errorResponse = try Response(dictionary: errorDic, route: .named("").route)
+				for handler in self.handlers.values {
+					handler.handleResponse(errorResponse)
+				}
+			} catch {
+			}
+		}
+	}
 }
